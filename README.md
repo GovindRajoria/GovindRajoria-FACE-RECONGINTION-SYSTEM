@@ -1,6 +1,4 @@
 
----
-
 # 🧠 Face Recognition System
 
 A Python-based AI system for **real-time face capture**, **model training**, and **face recognition** using OpenCV. Designed to be lightweight, scalable, and easy to use — no GPU required!

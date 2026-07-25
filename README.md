@@ -1,67 +1,113 @@
+# Face Recognition System
 
-# 🧠 Face Recognition System
+Real-time face recognition on CPU using OpenCV — Haar cascade detection for
+locating faces, LBPH (Local Binary Patterns Histograms) for identifying them.
+No GPU, no deep learning framework, no cloud service.
 
-A Python-based AI system for **real-time face capture**, **model training**, and **face recognition** using OpenCV. Designed to be lightweight, scalable, and easy to use — no GPU required!
-
----
-
-## 🔑 Key Features
-
-✅ **Three-Step Workflow**  
-- **📸 Face Capture** (`face_taker.py`) — Collects 120 training images per user.  
-- **🧠 Model Training** (`face_trainer.py`) — Trains using OpenCV’s LBPH algorithm.  
-- **🎯 Real-Time Recognition** (`face_recognizer.py`) — Identifies faces and shows confidence scores.
-
-✅ **User-Friendly CLI** — Guided prompts for seamless interaction.  
-✅ **Scalable** — Add unlimited users by re-running the capture script.  
-✅ **Lightweight** — Works on CPU using Haar Cascades + LBPH (no GPU needed).
+The point of the design is cost: LBPH trains in seconds on a hundred or so
+grayscale crops and recognises in a single pass over the frame, which makes it
+viable on hardware where a CNN-based embedding model would not be.
 
 ---
 
-## 🚀 Quick Start
+## How it works
 
-### 1. Capture Faces
+Three stages, each a standalone script.
+
+### 1. Capture — `src/face_taker.py`
+
+Prompts for a name, allocates the next free numeric ID by scanning existing
+filenames, and records the mapping into `names.json`. Then it opens the webcam
+and, on every frame, runs the Haar cascade over the grayscale image and writes
+each detected face region to `images/Users-{id}-{n}.jpg`, overlaying capture
+progress on the preview until 120 samples are collected.
+
+Only the cropped grayscale face region is stored, never the full frame.
+
+### 2. Train — `src/face_trainer.py`
+
+Loads every image in `images/`, derives the label from the filename, and fits
+`cv2.face.LBPHFaceRecognizer` over the set. The trained model is written to
+`trainer.yml`.
+
+### 3. Recognise — `src/face_recognizer.py`
+
+Loads `trainer.yml` and `names.json`, then for each detected face predicts a
+label and a distance. LBPH returns *distance*, where lower means a better match,
+so the displayed confidence is inverted from it; predictions past the threshold
+are reported as unknown rather than forced to the nearest label.
+
+---
+
+## Setup
+
+Requires Python 3.8+ and a webcam.
+
 ```bash
-python src/face_taker.py
+git clone https://github.com/GovindRajoria/face-recognition-system.git
+cd face-recognition-system
+pip install -r requirements.txt
 ```
-> 📝 Enter your name when prompted.  
-> 💡 Ensure good lighting and varied angles for better accuracy.
 
-### 2. Train the Model
+`opencv-contrib-python` is required rather than `opencv-python` — the `cv2.face`
+module that provides LBPH ships only in the contrib build.
+
+Run the stages in order, from the repository root:
+
 ```bash
-python src/face_trainer.py
+python src/face_taker.py       # capture 120 samples, prompts for a name
+python src/face_trainer.py     # fit the LBPH model -> trainer.yml
+python src/face_recognizer.py  # live recognition; ESC to quit
 ```
 
-### 3. Run Real-Time Recognition
-```bash
-python src/face_recognizer.py
-```
-> ⎋ Press **ESC** to exit.
+Add more people by re-running the capture step and retraining.
+
+## Configuration
+
+Everything tunable lives in `src/settings/settings.py`: camera index and
+resolution, Haar cascade `scale_factor` / `min_neighbors` / `min_size`, the
+number of training samples per person, and the data paths.
+
+If detection is missing faces, `scale_factor` (default `1.3`) and
+`min_neighbors` (default `5`) are the two knobs that matter — lower values
+detect more aggressively at the cost of false positives.
 
 ---
 
-## 📦 Dependencies
+## A note on the data
 
-- Python 3.x  
-- [OpenCV](https://pypi.org/project/opencv-contrib-python/)  
-  ```bash
-  pip install opencv-contrib-python
-  ```
-- NumPy  
-  ```bash
-  pip install numpy
-  ```
-- Pillow  
-  ```bash
-  pip install pillow
-  ```
+`images/`, `trainer.yml` and `names.json` are git-ignored, and the sample set
+this project was developed against has been removed from the repository history.
+
+Face images and a model trained on them are biometric data. They identify a
+specific person permanently — unlike a password, they cannot be rotated after
+exposure. They belong on the machine that captured them and nowhere else, which
+is why nothing here ships with a pre-trained model: run the capture step and
+generate your own.
+
+If you extend this to other people, get their consent first.
 
 ---
 
-## 🔮 Future Enhancements
+## Limitations
 
-- 🤖 Integrate deep learning (e.g., **FaceNet** for higher accuracy)  
-- 🌐 Deploy as a web app using **Flask** or **Streamlit**  
-- 🔒 Add support for **encrypted user data**  
+- LBPH is sensitive to lighting and pose. Accuracy degrades noticeably between
+  the conditions it was trained under and materially different ones — capturing
+  samples across varied lighting and angles helps more than any parameter change.
+- Haar cascades detect frontal faces only; profiles are missed.
+- There is no anti-spoofing. A photograph held up to the camera will be
+  recognised as the person in it, so this is unsuitable for access control on
+  its own.
+- Recognition runs single-threaded, inline with frame capture.
 
----
+## Possible extensions
+
+- Swap LBPH for a face-embedding model (FaceNet, ArcFace) and weigh the accuracy
+  gain against the CPU cost.
+- Add liveness detection — blink or texture analysis — before trusting a match.
+- Persist recognition events with timestamps to build an attendance log.
+
+## Author
+
+**Govind Kumar** — AI/ML Developer, Metro Infrasys Private Limited
+[GitHub](https://github.com/GovindRajoria) · govindrajoria97@gmail.com

@@ -1,0 +1,4 @@
+# LBPH recognition lives in opencv-contrib (cv2.face), not the base package.
+opencv-contrib-python
+numpy
+Pillow

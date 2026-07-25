@@ -1,0 +1,18 @@
+# Captured face images and the trained model are biometric data.
+# They are generated locally by face_taker.py / face_trainer.py and must never
+# be committed.
+images/
+trainer.yml
+names.json
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

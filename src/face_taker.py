@@ -1,13 +1,19 @@
-# Suppress macOS warning
+# The filter is installed before cv2 is imported, not after, because the macOS
+# warning it suppresses is emitted during that import. Moving these below the
+# imports to satisfy E402 would silence nothing, so the rule is waived here with
+# the reason attached rather than disabled repository-wide.
 import warnings
+
 warnings.filterwarnings('ignore', category=UserWarning)
 
-import json
-import cv2
-import os
-from typing import Optional, Dict
-import logging
-from settings.settings import CAMERA, FACE_DETECTION, TRAINING, PATHS
+import json  # noqa: E402
+import logging  # noqa: E402
+import os  # noqa: E402
+from typing import Dict, Optional  # noqa: E402
+
+import cv2  # noqa: E402
+
+from settings.settings import CAMERA, FACE_DETECTION, PATHS, TRAINING  # noqa: E402
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

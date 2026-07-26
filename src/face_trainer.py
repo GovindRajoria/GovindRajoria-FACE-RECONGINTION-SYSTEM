@@ -1,10 +1,12 @@
 
 
+import logging
+import os
+
 import cv2
 import numpy as np
 from PIL import Image
-import os
-import logging
+
 from settings.settings import PATHS
 
 # Configure logging

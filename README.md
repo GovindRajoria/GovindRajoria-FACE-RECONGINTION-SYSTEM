@@ -1,5 +1,7 @@
 # Face Recognition System
 
+[![CI](https://github.com/GovindRajoria/face-recognition-system/actions/workflows/ci.yml/badge.svg)](https://github.com/GovindRajoria/face-recognition-system/actions/workflows/ci.yml)
+
 Real-time face recognition on CPU using OpenCV — Haar cascade detection for
 locating faces, LBPH (Local Binary Patterns Histograms) for identifying them.
 No GPU, no deep learning framework, no cloud service.
@@ -8,9 +10,44 @@ The point of the design is cost: LBPH trains in seconds on a hundred or so
 grayscale crops and recognises in a single pass over the frame, which makes it
 viable on hardware where a CNN-based embedding model would not be.
 
+Why LBPH, what it costs, and the gallery size at which it stops being the right
+answer: [docs/DESIGN.md](docs/DESIGN.md).
+
 ---
 
 ## How it works
+
+```mermaid
+flowchart LR
+  cam(["Webcam"]) --> taker
+
+  subgraph capture["1 · Capture — src/face_taker.py"]
+    taker["Haar cascade<br/>on greyscale frame"] --> crop["crop face region<br/>×120 samples"]
+  end
+
+  crop --> imgs[("images/<br/>Users-{id}-{n}.jpg")]
+  crop --> names[("names.json<br/>id → name")]
+
+  subgraph train["2 · Train — src/face_trainer.py"]
+    fit["LBPHFaceRecognizer<br/>label from filename"]
+  end
+
+  imgs --> fit --> model[("trainer.yml")]
+
+  subgraph recog["3 · Recognise — src/face_recognizer.py"]
+    detect["Haar cascade"] --> predict["predict → label + distance"]
+    predict --> gate{"distance<br/>within threshold?"}
+    gate -->|yes| named["draw name"]
+    gate -->|no| unknown["draw Unknown"]
+  end
+
+  cam --> detect
+  model --> predict
+  names --> predict
+```
+
+Everything on the right of the diagram — `images/`, `names.json`, `trainer.yml` —
+is git-ignored. See [A note on the data](#a-note-on-the-data).
 
 Three stages, each a standalone script.
 
@@ -51,6 +88,16 @@ pip install -r requirements.txt
 
 `opencv-contrib-python` is required rather than `opencv-python` — the `cv2.face`
 module that provides LBPH ships only in the contrib build.
+
+Check the environment before running anything:
+
+```bash
+python scripts/verify_setup.py
+```
+
+It confirms `cv2.face` exists and that the Haar cascade loads as a usable
+classifier — the two failures that otherwise surface several steps later as
+errors naming neither cause. It opens no camera. This is also what CI runs.
 
 Run the stages in order, from the repository root:
 

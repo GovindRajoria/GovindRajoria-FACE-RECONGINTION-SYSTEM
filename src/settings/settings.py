@@ -1,7 +1,6 @@
 """
 Configuration settings for the face recognition system
 """
-import os
 
 # Camera settings
 CAMERA = {

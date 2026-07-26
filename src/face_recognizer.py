@@ -1,9 +1,10 @@
 
-import cv2
-import numpy as np
 import json
-import os
 import logging
+import os
+
+import cv2
+
 from settings.settings import CAMERA, FACE_DETECTION, PATHS
 
 # Configure logging

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor and the current release. The floor matters because the
+        # README claims 3.8+, and that claim was never checked anywhere.
+        python-version: ['3.8', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # opencv-contrib-python links against these. The runner is headless, so
+      # `import cv2` fails with "libGL.so.1: cannot open shared object file"
+      # without them — an error that says nothing about OpenCV.
+      - name: System libraries
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.16.0
+
+      # Pinned version: an unpinned linter is a gate that can fail on a release
+      # unrelated to any change here.
+      - name: Lint
+        run: ruff check .
+
+      - name: Compile
+        run: python -m compileall -q src scripts
+
+      # The real gate. It asserts cv2.face exists — the whole reason
+      # requirements.txt pins the contrib build rather than opencv-python — and
+      # that the shipped Haar cascade loads as a usable classifier rather than
+      # the empty one CascadeClassifier returns without raising.
+      - name: Verify the environment
+        run: python scripts/verify_setup.py

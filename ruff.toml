@@ -1,0 +1,13 @@
+# The rule set is pinned explicitly rather than left to ruff's defaults, which
+# have changed between releases — an unpinned selection makes a lint gate that
+# passes today and fails on a version bump for reasons unrelated to the code.
+#
+# Deliberately excluded:
+#   UP  — would rewrite `Optional[T]` to `T | None`, which is a runtime error on
+#         the Python 3.8 this project claims to support.
+#   BLE — the scripts catch broad exceptions on purpose: a failed frame or a
+#         malformed name file should log and carry on, not kill a live capture.
+line-length = 100
+
+[lint]
+select = ["E4", "E7", "E9", "F", "I"]
